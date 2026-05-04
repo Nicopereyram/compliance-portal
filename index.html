@@ -353,12 +353,76 @@ function renderDenuncias(){
       <select class="filter-select" id="den-tipo" onchange="filterTable('den')"><option value="">Todos los tipos</option>${tipos.map(c=>`<option>${c}</option>`).join('')}</select>
       <select class="filter-select" id="den-est" onchange="filterTable('den')"><option value="">Todos los estados</option><option>Recibida</option><option>En investigación</option><option>Cerrada</option><option>Desestimada</option></select>
     </div>
-    <div class="table-wrap"><table><thead><tr><th>ID</th><th>Fecha</th><th>Tipo</th><th>Área</th><th>Anónimo</th><th>Estado</th><th>Investigador</th></tr></thead>
-    <tbody id="den-body">${renderDenRows(data)}</tbody></table></div>`;
+    <div class="table-wrap"><table><thead><tr><th>ID</th><th>Fecha</th><th>Tipo</th><th>Área</th><th>Anónimo</th><th>Estado</th><th>Investigador</th><th></th></tr></thead>
+    <tbody id="den-body">${renderDenRows(data)}</tbody></table></div>
+    <div id="den-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;align-items:center;justify-content:center;">
+      <div style="background:var(--bg2);border:0.5px solid var(--border2);border-radius:18px;padding:32px;max-width:560px;width:90%;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+          <div>
+            <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:4px;" id="modal-id"></div>
+            <div style="font-size:17px;font-weight:600;" id="modal-tipo"></div>
+          </div>
+          <button onclick="closeModal()" style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:8px;padding:6px 12px;color:var(--text2);cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;">Cerrar</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;" id="modal-meta"></div>
+        <div style="margin-bottom:8px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;">Descripción</div>
+        <div id="modal-desc" style="background:var(--bg3);border:0.5px solid var(--border);border-radius:10px;padding:16px;font-size:14px;color:var(--text);line-height:1.7;white-space:pre-wrap;"></div>
+        <div id="modal-resolucion" style="margin-top:16px;display:none;">
+          <div style="margin-bottom:8px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;">Resolución</div>
+          <div id="modal-resolucion-text" style="background:var(--bg3);border:0.5px solid var(--border);border-radius:10px;padding:16px;font-size:14px;color:var(--text);line-height:1.7;"></div>
+        </div>
+      </div>
+    </div>`;
 }
+
+function openDenuncia(idx){
+  const data=sheetData['2. Canal de denuncias']||[];
+  const r=data[idx]; if(!r)return;
+  document.getElementById('modal-id').textContent=r['ID_denuncia']||'—';
+  document.getElementById('modal-tipo').textContent=r['Tipo']||'Sin tipo';
+  document.getElementById('modal-desc').textContent=r['Descripción']||'Sin descripción registrada';
+  const meta=[
+    {label:'Fecha',value:r['Fecha_recepción']||'—'},
+    {label:'Área',value:r['Área_involucrada']||'—'},
+    {label:'Anónimo',value:r['Es_anónimo']||'—'},
+    {label:'Estado',value:r['Estado']||'—'},
+    {label:'Investigador',value:r['Investigador']||'—'},
+    {label:'Fecha cierre',value:r['Fecha_cierre']||'—'},
+  ];
+  document.getElementById('modal-meta').innerHTML=meta.map(m=>`
+    <div style="background:var(--bg3);border:0.5px solid var(--border);border-radius:8px;padding:10px 14px;">
+      <div style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">${m.label}</div>
+      <div style="font-size:13px;color:var(--text);">${m.value}</div>
+    </div>`).join('');
+  const res=r['Resolución']||r['Accion_tomada']||'';
+  const resDiv=document.getElementById('modal-resolucion');
+  if(res){document.getElementById('modal-resolucion-text').textContent=res;resDiv.style.display='block';}
+  else{resDiv.style.display='none';}
+  const modal=document.getElementById('den-modal');
+  modal.style.display='flex';
+  modal.onclick=function(e){if(e.target===modal)closeModal();};
+}
+
+function closeModal(){
+  document.getElementById('den-modal').style.display='none';
+}
+
 function renderDenRows(data){
-  if(!data.length)return'<tr><td colspan="7" class="empty-state">Sin registros</td></tr>';
-  return data.map(r=>`<tr><td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)">${r['ID_denuncia']||'—'}</td><td style="font-size:12px">${r['Fecha_recepción']||'—'}</td><td>${badge(r['Tipo'])}</td><td>${r['Área_involucrada']||'—'}</td><td>${badge(r['Es_anónimo'])}</td><td>${badge(r['Estado'])}</td><td style="font-size:12px">${r['Investigador']||'—'}</td></tr>`).join('');
+  if(!data.length)return'<tr><td colspan="8" class="empty-state">Sin registros</td></tr>';
+  const all=sheetData['2. Canal de denuncias']||[];
+  return data.map(r=>{
+    const idx=all.findIndex(x=>x['ID_denuncia']===r['ID_denuncia']);
+    return`<tr style="cursor:pointer" onclick="openDenuncia(${idx})">
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)">${r['ID_denuncia']||'—'}</td>
+      <td style="font-size:12px">${r['Fecha_recepción']||'—'}</td>
+      <td>${badge(r['Tipo'])}</td>
+      <td>${r['Área_involucrada']||'—'}</td>
+      <td>${badge(r['Es_anónimo'])}</td>
+      <td>${badge(r['Estado'])}</td>
+      <td style="font-size:12px">${r['Investigador']||'—'}</td>
+      <td style="font-size:12px;color:var(--accent)">Ver →</td>
+    </tr>`;
+  }).join('');
 }
 
 // ── NUEVA DENUNCIA (empleados) ──
