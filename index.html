@@ -497,6 +497,14 @@ function badge(t){
 }
 function lnk(url){return url&&url.startsWith('http')?`<a href="${url}" target="_blank" class="link-btn">Ver →</a>`:`<span style="color:var(--text3);font-size:12px">—</span>`;}
 function today(){const n=new Date();return`${String(n.getDate()).padStart(2,'0')}/${String(n.getMonth()+1).padStart(2,'0')}/${n.getFullYear()}`;}
+function formatFecha(f){
+  if(!f||f==='—')return'—';
+  // Already in DD/MM/YYYY format
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(f))return f;
+  // Try to parse full date string
+  try{const d=new Date(f);if(!isNaN(d))return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;}catch(e){}
+  return f;
+}
 
 function statIcon(type){
   const icons={
@@ -566,8 +574,9 @@ function renderDenuncias(){
 function rDenRows(data){if(!data.length)return'<tr><td colspan="6" class="empty-state">Sin registros</td></tr>';
   const all=sheetData['2. Canal de denuncias']||[];
   return data.map(r=>{const idx=all.findIndex(x=>x['ID_denuncia']===r['ID_denuncia']);
-    const denunciante = r['Es_anónimo']==='Sí' || !r['Denunciante'] || r['Denunciante']==='Anónimo' || r['Denunciante']==='' ? '<span class="badge badge-gray">Anónimo</span>' : '<span style="font-size:12px;color:var(--text);font-weight:500">'+r['Denunciante']+'</span>';
-    return`<tr style="cursor:pointer" onclick="openDen(${idx})"><td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3)">${r['ID_denuncia']||'—'}</td><td class="muted" style="font-size:12px">${r['Fecha_recepción']||'—'}</td><td>${badge(r['Tipo'])}</td><td>${r['Área_involucrada']||'—'}</td><td>${denunciante}</td><td>${badge(r['Estado'])}</td><td class="muted" style="font-size:12px">${r['Investigador']||'—'}</td><td style="color:var(--red3);font-size:12px;font-weight:700">Ver →</td></tr>`;
+    const _den=r['Denunciante']||'';const _isAnon=r['Es_anónimo']==='Sí'||!_den||_den===''||_den==='Anónimo'||_den==='App';
+    const denunciante = _isAnon ? '<span class="badge badge-gray">Anónimo</span>' : '<span style="font-size:12px;color:var(--text);font-weight:500">'+_den+'</span>';
+    return`<tr style="cursor:pointer" onclick="openDen(${idx})"><td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3)">${r['ID_denuncia']||'—'}</td><td class="muted" style="font-size:12px">${formatFecha(r['Fecha_recepción'])}</td><td>${badge(r['Tipo'])}</td><td>${r['Área_involucrada']||'—'}</td><td>${denunciante}</td><td>${badge(r['Estado'])}</td><td class="muted" style="font-size:12px">${r['Investigador']||'—'}</td><td style="color:var(--red3);font-size:12px;font-weight:700">Ver →</td></tr>`;
   }).join('');}
 
 function openDen(idx){
@@ -598,7 +607,7 @@ function openDen(idx){
   } else {
     adjWrap.style.display = 'none';
   }
-  const denuncianteVal=r['Es_anónimo']==='Sí'?'Anónimo':(r['Denunciante']||r['Es_anónimo']||'—');const meta=[{l:'Fecha',v:r['Fecha_recepción']||'—'},{l:'Área',v:r['Área_involucrada']||'—'},{l:'Denunciante',v:denuncianteVal},{l:'Estado',v:r['Estado']||'—'},{l:'Investigador',v:r['Investigador']||'—'},{l:'Cierre',v:r['Fecha_cierre']||'—'}];
+  const denuncianteVal=r['Es_anónimo']==='Sí'?'Anónimo':(r['Denunciante']||r['Es_anónimo']||'—');const meta=[{l:'Fecha',v:formatFecha(r['Fecha_recepción'])},{l:'Área',v:r['Área_involucrada']||'—'},{l:'Denunciante',v:denuncianteVal},{l:'Estado',v:r['Estado']||'—'},{l:'Investigador',v:r['Investigador']||'—'},{l:'Cierre',v:r['Fecha_cierre']||'—'}];
   document.getElementById('modal-meta').innerHTML=meta.map(m=>`<div class="modal-meta-item"><div class="modal-meta-label">${m.l}</div><div class="modal-meta-value">${m.v}</div></div>`).join('');
   const res=r['Resolución']||'';
   const rw=document.getElementById('modal-resolucion-wrap');
