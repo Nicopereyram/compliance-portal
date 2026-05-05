@@ -499,11 +499,25 @@ function lnk(url){return url&&url.startsWith('http')?`<a href="${url}" target="_
 function today(){const n=new Date();return`${String(n.getDate()).padStart(2,'0')}/${String(n.getMonth()+1).padStart(2,'0')}/${n.getFullYear()}`;}
 function formatFecha(f){
   if(!f||f==='—')return'—';
+  const s=String(f).trim();
   // Already in DD/MM/YYYY format
-  if(/^\d{2}\/\d{2}\/\d{4}$/.test(f))return f;
-  // Try to parse full date string
-  try{const d=new Date(f);if(!isNaN(d))return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;}catch(e){}
-  return f;
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(s))return s;
+  // Contains time/timezone - parse and reformat
+  try{
+    const d=new Date(s);
+    if(!isNaN(d.getTime())){
+      return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    }
+  }catch(e){}
+  // Try extracting just the date part if it contains a space
+  const parts=s.split(' ');
+  if(parts.length>1){
+    try{
+      const d=new Date(parts.slice(0,4).join(' '));
+      if(!isNaN(d.getTime()))return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    }catch(e){}
+  }
+  return s;
 }
 
 function statIcon(type){
@@ -574,7 +588,9 @@ function renderDenuncias(){
 function rDenRows(data){if(!data.length)return'<tr><td colspan="6" class="empty-state">Sin registros</td></tr>';
   const all=sheetData['2. Canal de denuncias']||[];
   return data.map(r=>{const idx=all.findIndex(x=>x['ID_denuncia']===r['ID_denuncia']);
-    const _den=r['Denunciante']||'';const _isAnon=r['Es_anónimo']==='Sí'||!_den||_den===''||_den==='Anónimo'||_den==='App';
+    const _den=r['Denunciante']||'';
+    const _anonVal=(r['Es_anónimo']||r['Es_anonimo']||'').toString().trim();
+    const _isAnon=_anonVal==='Sí'||_anonVal==='Si'||!_den||_den.trim()===''||_den==='Anónimo'||_den==='Anonimo'||_den==='App';
     const denunciante = _isAnon ? '<span class="badge badge-gray">Anónimo</span>' : '<span style="font-size:12px;color:var(--text);font-weight:500">'+_den+'</span>';
     return`<tr style="cursor:pointer" onclick="openDen(${idx})"><td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3)">${r['ID_denuncia']||'—'}</td><td class="muted" style="font-size:12px">${formatFecha(r['Fecha_recepción'])}</td><td>${badge(r['Tipo'])}</td><td>${r['Área_involucrada']||'—'}</td><td>${denunciante}</td><td>${badge(r['Estado'])}</td><td class="muted" style="font-size:12px">${r['Investigador']||'—'}</td><td style="color:var(--red3);font-size:12px;font-weight:700">Ver →</td></tr>`;
   }).join('');}
